@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>MCIF Human Annotation</title>
+
+    
+</head>
+    <style>
+
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+    }
+
+
+    .page-layout {
+        display: grid;
+        grid-template-columns: 48% 52%;
+        min-height: 100vh;
+    }
+
+
+    /* LEFT SIDE */
+
+    .image-panel {
+        background: white;
+        padding: 24px;
+        border-right: 1px solid #ddd;
+    }
+
+
+    .image-sticky {
+        position: sticky;
+        top: 20px;
+    }
+
+
+    .image-sticky img {
+        width: 100%;
+        max-height: 72vh;
+        object-fit: contain;
+        background: #111;
+        border-radius: 8px;
+    }
+
+
+    .metadata {
+        margin-top: 15px;
+        padding: 15px;
+        background: #eeeeee;
+        border-radius: 8px;
+        line-height: 1.6;
+    }
+
+
+    /* RIGHT SIDE */
+
+    .annotation-panel {
+        padding: 30px 40px;
+    }
+
+
+    .top-bar {
+        margin-bottom: 30px;
+    }
+
+
+    section {
+        margin-bottom: 35px;
+    }
+
+
+    .category-box {
+        background: white;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+    }
+
+
+    .category-box ul {
+        list-style: none;
+        padding-left: 0;
+    }
+
+
+    .category-box li {
+        margin-bottom: 8px;
+    }
+
+
+    input[type="number"],
+    textarea {
+        width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+    }
+
+
+    .submit-area {
+        padding: 30px 0 60px 0;
+    }
+
+
+    button {
+        padding: 15px 30px;
+        font-size: 18px;
+        cursor: pointer;
+    }
+
+
+    /* MOBILE */
+
+    @media (max-width: 900px) {
+
+        .page-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .image-panel {
+            border-right: none;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .image-sticky {
+            position: relative;
+            top: 0;
+        }
+
+        .image-sticky img {
+            max-height: 50vh;
+        }
+
+    }
+
+    </style>
+
+<body>
+
+<div class="page-layout">
+
+    <!-- LEFT: sticky image -->
+    <div class="image-panel">
+
+        <div class="image-sticky">
+
+            <h2>Image</h2>
+
+            <img
+                src="{{ image_url }}"
+                alt="{{ image.filename }}"
+            >
+
+            <div class="metadata">
+                <strong>Audit:</strong>
+                {{ image.audit_id }}
+
+                <br>
+
+                <strong>Image:</strong>
+                {{ image.filename }}
+
+                <br>
+
+                <strong>Image ID:</strong>
+                {{ image.image_id }}
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- RIGHT: scrolling annotation form -->
+    <div class="annotation-panel">
+
+        <div class="top-bar">
+
+            <h1>
+                MCIF Human Annotation
+            </h1>
+
+            <p>
+                Logged in as:
+                <strong>
+                    {{ request.user.username }}
+                </strong>
+            </p>
+
+        </div>
+
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            <section>
+                <h2>Workers</h2>
+
+                {{ form.worker_count.label_tag }}
+                {{ form.worker_count }}
+            </section>
+
+
+            <section>
+                <h2>PPE Compliance</h2>
+
+                {{ form.ppe_compliance }}
+            </section>
+
+
+            <section>
+                <h2>Visual Features</h2>
+
+                {% for field in form %}
+
+                    {% if field.name != "worker_count" and field.name != "ppe_compliance" and field.name != "notes" %}
+
+                        <div class="category-box">
+
+                            <h3>
+                                {{ field.label }}
+                            </h3>
+
+                            {{ field }}
+
+                        </div>
+
+                    {% endif %}
+
+                {% endfor %}
+
+            </section>
+
+
+            <section>
+                <h2>Notes</h2>
+
+                {{ form.notes }}
+            </section>
+
+
+            <div class="submit-area">
+
+                <button type="submit">
+                    Submit Annotation & Next Image
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const categoryBoxes = document.querySelectorAll(".category-box");
+
+    categoryBoxes.forEach(function (box) {
+
+        const checkboxes = box.querySelectorAll(
+            'input[type="checkbox"]'
+        );
+
+        checkboxes.forEach(function (checkbox) {
+
+            checkbox.addEventListener("change", function () {
+
+                const label = box.querySelector(
+                    `label[for="${checkbox.id}"]`
+                );
+
+                const text = label
+                    ? label.textContent.trim().toLowerCase()
+                    : "";
+
+                const isSpecial =
+                    text.includes("none visible") ||
+                    text.includes("uncertain") ||
+                    text.includes("other");
+
+                if (checkbox.checked && isSpecial) {
+
+                    checkboxes.forEach(function (other) {
+
+                        if (other !== checkbox) {
+                            other.checked = false;
+                        }
+
+                    });
+
+                }
+
+                else if (checkbox.checked) {
+
+                    checkboxes.forEach(function (other) {
+
+                        const otherLabel = box.querySelector(
+                            `label[for="${other.id}"]`
+                        );
+
+                        const otherText = otherLabel
+                            ? otherLabel.textContent
+                                .trim()
+                                .toLowerCase()
+                            : "";
+
+                        if (
+                            otherText.includes("none visible") ||
+                            otherText.includes("uncertain") ||
+                            otherText.includes("other")
+                        ) {
+                            other.checked = false;
+                        }
+
+                    });
+
+                }
+
+            });
+
+        });
+
+    });
+
+});
+</script>
+
+</body>
+
+</html>
