@@ -17,15 +17,199 @@ from annotation.services.s3_storage import get_presigned_image_url
 
 from annotation.forms import AnnotationForm
 from annotation.models import (
-    Image,
-    ImageAssignment,
-    Annotation,
     AnnotationSelection,
     TaxonomyItem,
 )
 from annotation.services.s3_storage import (
     get_presigned_image_url,
 )
+
+import csv
+
+from django.contrib.auth.decorators import user_passes_test
+from django.http import HttpResponse
+
+def superuser_check(user):
+    return user.is_authenticated and user.is_superuser
+
+@user_passes_test(superuser_check)
+def admin_export(request):
+
+    completed_count = (
+        Annotation.objects
+        .filter(completed=True)
+        .count()
+    )
+
+    return render(
+        request,
+        "annotation/admin_export.html",
+        {
+            "completed_count": completed_count,
+        },
+    )
+
+
+@user_passes_test(superuser_check)
+def download_annotations_csv(request):
+
+    response = HttpResponse(
+        content_type="text/csv"
+    )
+
+    response[
+        "Content-Disposition"
+    ] = (
+        'attachment; '
+        'filename="human_annotations.csv"'
+    )
+
+    writer = csv.writer(response)
+
+    writer.writerow([
+        "annotation_id",
+        "audit_id",
+        "image_id",
+        "filename",
+        "annotator",
+        "worker_count",
+        "ppe_compliance",
+        "equipment",
+        "materials_components",
+        "hazards",
+        "activities",
+        "quality_observations",
+        "stage",
+        "notes",
+        "taxonomy_version",
+        "completed_at",
+    ])
+
+    category_map = {
+        "Equipment":
+            "equipment",
+
+        "Materials / Components":
+            "materials_components",
+
+        "Hazards":
+            "hazards",
+
+        "Activities":
+            "activities",
+
+        "Quality Observations":
+            "quality_observations",
+
+        "Stage":
+            "stage",
+    }
+
+    annotations = (
+        Annotation.objects
+        .filter(completed=True)
+        .select_related(
+            "image",
+            "annotator",
+        )
+        .prefetch_related(
+            "selections__taxonomy_item__category"
+        )
+        .order_by("id")
+    )
+
+    for annotation in annotations:
+
+        selections = {
+            "equipment": [],
+            "materials_components": [],
+            "hazards": [],
+            "activities": [],
+            "quality_observations": [],
+            "stage": [],
+        }
+
+        for selection in annotation.selections.all():
+
+            item = selection.taxonomy_item
+
+            category_name = (
+                item.category.name
+            )
+
+            column_name = (
+                category_map.get(
+                    category_name
+                )
+            )
+
+            if not column_name:
+                continue
+
+            selections[
+                column_name
+            ].append(
+                item.canonical_name
+            )
+
+        writer.writerow([
+            annotation.id,
+            annotation.image.audit_id,
+            annotation.image.image_id,
+            annotation.image.filename,
+            annotation.annotator.username,
+            annotation.worker_count,
+            annotation.ppe_compliance,
+
+            " | ".join(
+                selections["equipment"]
+            ),
+
+            " | ".join(
+                selections[
+                    "materials_components"
+                ]
+            ),
+
+            " | ".join(
+                selections["hazards"]
+            ),
+
+            " | ".join(
+                selections["activities"]
+            ),
+
+            " | ".join(
+                selections[
+                    "quality_observations"
+                ]
+            ),
+
+            " | ".join(
+                selections["stage"]
+            ),
+
+            annotation.notes,
+            annotation.taxonomy_version,
+
+            (
+                annotation.completed_at.isoformat()
+                if annotation.completed_at
+                else ""
+            ),
+        ])
+
+    return response
+
+def home(request):
+
+    if request.user.is_authenticated:
+        return redirect("annotate")
+
+    return render(
+        request,
+        "annotation/home.html",
+    )
 
 
 def signup(request):
@@ -65,7 +249,6 @@ def signup(request):
             "form": form
         }
     )
-
 
 
 @login_required
@@ -133,17 +316,18 @@ def annotate(request):
                     id__in=assigned_image_ids
                 )
                 .annotate(
-                    completed_count=Count(
+                    occupied_count=Count(
                         "assignments",
                         filter=Q(
-                            assignments__status="completed"
+                            assignments__status__in=[
+                                "assigned",
+                                "completed",
+                            ]
                         ),
                     )
                 )
                 .filter(
-                    completed_count__lt=F(
-                        "target_annotations"
-                    )
+                    occupied_count=0
                 )
                 .order_by("id")
             )
@@ -172,6 +356,14 @@ def annotate(request):
         )
 
     image = assignment.image
+
+    # -----------------------------------------
+    # S3 temporary URL
+    # -----------------------------------------
+
+    image_url = get_presigned_image_url(
+        image
+    )
 
     # -----------------------------------------
     # Handle submitted annotation
@@ -212,10 +404,11 @@ def annotate(request):
                     )
                 )
 
+                # ---------------------------------
                 # Save taxonomy selections
-                for field_info in (
-                    form.taxonomy_fields
-                ):
+                # ---------------------------------
+
+                for field_info in form.taxonomy_fields:
 
                     field_name = (
                         field_info["name"]
@@ -230,8 +423,7 @@ def annotate(request):
                     if selected is None:
                         continue
 
-                    # ModelChoiceField:
-                    # one TaxonomyItem
+                    # Single TaxonomyItem
                     if isinstance(
                         selected,
                         TaxonomyItem
@@ -242,8 +434,7 @@ def annotate(request):
                             taxonomy_item=selected,
                         )
 
-                    # ModelMultipleChoiceField:
-                    # queryset of TaxonomyItems
+                    # Multiple TaxonomyItems
                     else:
 
                         for item in selected:
@@ -253,9 +444,15 @@ def annotate(request):
                                 taxonomy_item=item,
                             )
 
+                # ---------------------------------
                 # Complete assignment
+                # ---------------------------------
+
                 assignment.status = "completed"
-                assignment.completed_at = timezone.now()
+
+                assignment.completed_at = (
+                    timezone.now()
+                )
 
                 assignment.save(
                     update_fields=[
@@ -264,7 +461,6 @@ def annotate(request):
                     ]
                 )
 
-            # Reload /annotate/ and receive next image
             return redirect(
                 "annotate"
             )
@@ -274,14 +470,21 @@ def annotate(request):
         form = AnnotationForm()
 
     # -----------------------------------------
-    # S3 temporary URL
+    # Completed annotations by current user
     # -----------------------------------------
 
-    image_url = (
-        get_presigned_image_url(
-            image
+    completed_count = (
+        Annotation.objects
+        .filter(
+            annotator=user,
+            completed=True,
         )
+        .count()
     )
+
+    # -----------------------------------------
+    # Render page
+    # -----------------------------------------
 
     return render(
         request,
@@ -290,8 +493,12 @@ def annotate(request):
             "image": image,
             "image_url": image_url,
             "form": form,
+            "completed_count": completed_count,
         },
     )
+
+
+
 
 @login_required
 def taxonomy_help(request, item_id):
@@ -304,16 +511,30 @@ def taxonomy_help(request, item_id):
 
     example_image_url = None
 
-    if item.example_image:
+    if item.example_image_url:
+
+        example_image_url = (
+            item.example_image_url
+        )
+
+    elif item.example_image:
+
         try:
+
             example_image_url = (
                 item.example_image.url
             )
+
         except Exception:
+
             example_image_url = None
+
 
     return JsonResponse({
         "name": item.canonical_name,
         "description": item.description,
         "example_image": example_image_url,
     })
+
+
+

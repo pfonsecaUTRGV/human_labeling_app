@@ -2,79 +2,411 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Create Account</title>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Create Account
+    </title>
 
     <style>
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 40px;
+            margin:
+                0;
+
+            font-family:
+                Arial,
+                sans-serif;
+
+            background:
+                #f4f4f4;
+
+            color:
+                #222;
         }
 
-        .container {
-            max-width: 420px;
-            margin: 80px auto;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
+
+        .page {
+            min-height:
+                100vh;
+
+            display:
+                flex;
+
+            justify-content:
+                center;
+
+            align-items:
+                center;
+
+            padding:
+                30px;
+
+            box-sizing:
+                border-box;
         }
+
+
+        .card {
+            width:
+                100%;
+
+            max-width:
+                430px;
+
+            background:
+                white;
+
+            padding:
+                40px;
+
+            border:
+                1px solid #ddd;
+
+            border-radius:
+                12px;
+
+            box-sizing:
+                border-box;
+        }
+
+
+        .header {
+            text-align:
+                center;
+
+            margin-bottom:
+                30px;
+        }
+
+
+        .header h1 {
+            margin:
+                0 0 10px 0;
+
+            font-size:
+                30px;
+        }
+
+
+        .header p {
+            margin:
+                0;
+
+            color:
+                #666;
+
+            line-height:
+                1.5;
+        }
+
+
+        .section-title {
+            margin-bottom:
+                25px;
+
+            font-size:
+                22px;
+        }
+
+
+        form p {
+            margin-bottom:
+                18px;
+        }
+
+
+        label {
+            display:
+                block;
+
+            margin-bottom:
+                6px;
+
+            font-weight:
+                bold;
+
+            font-size:
+                14px;
+        }
+
 
         input {
-            width: 100%;
-            padding: 10px;
-            margin-top: 5px;
-            margin-bottom: 15px;
-            box-sizing: border-box;
+            width:
+                100%;
+
+            padding:
+                12px;
+
+            box-sizing:
+                border-box;
+
+            border:
+                1px solid #bbb;
+
+            border-radius:
+                6px;
+
+            font-size:
+                16px;
+
+            background:
+                white;
         }
 
-        button {
-            width: 100%;
-            padding: 12px;
-            cursor: pointer;
+
+        input:focus {
+            outline:
+                none;
+
+            border-color:
+                #555;
+
+            box-shadow:
+                0 0 0 2px rgba(0, 0, 0, 0.05);
         }
+
+
+        .signup-button {
+            width:
+                100%;
+
+            padding:
+                13px;
+
+            margin-top:
+                10px;
+
+            border:
+                none;
+
+            border-radius:
+                6px;
+
+            background:
+                #222;
+
+            color:
+                white;
+
+            font-size:
+                16px;
+
+            cursor:
+                pointer;
+        }
+
+
+        .signup-button:hover {
+            background:
+                #444;
+        }
+
 
         .login-link {
-            margin-top: 20px;
-            text-align: center;
+            margin-top:
+                25px;
+
+            padding-top:
+                20px;
+
+            border-top:
+                1px solid #eee;
+
+            text-align:
+                center;
+
+            color:
+                #666;
+
+            font-size:
+                14px;
         }
+
+
+        .login-link a {
+            color:
+                #222;
+
+            font-weight:
+                bold;
+
+            text-decoration:
+                none;
+        }
+
+
+        .login-link a:hover {
+            text-decoration:
+                underline;
+        }
+
+
+        .home-link {
+            margin-top:
+                15px;
+
+            text-align:
+                center;
+
+            font-size:
+                13px;
+        }
+
+
+        .home-link a {
+            color:
+                #777;
+
+            text-decoration:
+                none;
+        }
+
+
+        .home-link a:hover {
+            color:
+                #222;
+        }
+
+
+        .errorlist {
+            list-style:
+                none;
+
+            padding:
+                10px;
+
+            margin:
+                0 0 15px 0;
+
+            background:
+                #fff3f3;
+
+            border:
+                1px solid #e5b5b5;
+
+            border-radius:
+                6px;
+
+            color:
+                #a40000;
+
+            font-size:
+                14px;
+        }
+
+
+        .helptext {
+            display:
+                block;
+
+            margin-top:
+                5px;
+
+            color:
+                #777;
+
+            font-size:
+                12px;
+
+            line-height:
+                1.4;
+        }
+
+
+        @media (
+            max-width: 600px
+        ) {
+
+            .page {
+                padding:
+                    20px;
+            }
+
+
+            .card {
+                padding:
+                    30px 20px;
+            }
+
+        }
+
     </style>
+
 </head>
+
 
 <body>
 
-<div class="container">
+<div class="page">
 
-    <h1>MCIF Human Annotation</h1>
+    <div class="card">
 
-    <h2>Create Account</h2>
 
-    <form method="post">
+        <div class="header">
 
-        {% csrf_token %}
+            <h1>
+                MCIF Human Annotation
+            </h1>
 
-        {{ form.as_p }}
+            <p>
+                Create a simple account to participate
+                in the image annotation study.
+            </p>
 
-        <button type="submit">
+        </div>
+
+
+        <h2 class="section-title">
             Create Account
-        </button>
+        </h2>
 
-    </form>
 
-    <div class="login-link">
+        <form method="post">
 
-        Already have an account?
+            {% csrf_token %}
 
-        <a href="{% url 'login' %}">
-            Login
-        </a>
+            {{ form.as_p }}
+
+            <button
+                type="submit"
+                class="signup-button"
+            >
+                Create Account
+            </button>
+
+        </form>
+
+
+        <div class="login-link">
+
+            Already have an account?
+
+            <a href="{% url 'login' %}">
+                Login
+            </a>
+
+        </div>
+
+
+        <div class="home-link">
+
+            <a href="{% url 'home' %}">
+                ← Back to Home
+            </a>
+
+        </div>
 
     </div>
 
 </div>
 
 </body>
+
 </html>

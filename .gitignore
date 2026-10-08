@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+virt/
+venv/
+.venv/
+env/
+
+# Django local database
+db.sqlite3
+db.sqlite3.backup
+
+# Django generated static files
+staticfiles/
+
+# Environment / secrets
+.env
+.env.*
+*.env
+
+# macOS
+.DS_Store
+
+# Local data exports / backups
+mcif_data_backup.json
+human_annotations.csv
+human_annotations_anonymous.csv
+
+# Generated taxonomy helper CSVs
+taxonomy_help_content.csv
+taxonomy_help_content_final.csv
+taxonomy_help_content_populated.csv

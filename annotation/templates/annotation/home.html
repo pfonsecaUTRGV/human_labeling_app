@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        MCIF Human Annotation
+    </title>
+
+    <style>
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            color: #222;
+        }
+
+        .page {
+            min-height: 100vh;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            padding: 30px;
+
+            box-sizing: border-box;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 520px;
+
+            background: white;
+
+            padding: 40px;
+
+            border-radius: 12px;
+
+            border: 1px solid #ddd;
+
+            text-align: center;
+
+            box-sizing: border-box;
+        }
+
+        .title {
+            margin-top: 0;
+            margin-bottom: 10px;
+
+            font-size: 32px;
+        }
+
+        .subtitle {
+            margin-bottom: 30px;
+
+            color: #666;
+
+            line-height: 1.6;
+        }
+
+        .button-group {
+            display: flex;
+
+            gap: 15px;
+
+            justify-content: center;
+
+            flex-wrap: wrap;
+        }
+
+        .button {
+            display: inline-block;
+
+            min-width: 150px;
+
+            padding: 14px 22px;
+
+            border-radius: 6px;
+
+            text-decoration: none;
+
+            font-size: 17px;
+
+            cursor: pointer;
+
+            box-sizing: border-box;
+        }
+
+        .login-button {
+            background: #222;
+            color: white;
+
+            border: 1px solid #222;
+        }
+
+        .login-button:hover {
+            background: #444;
+        }
+
+        .register-button {
+            background: white;
+            color: #222;
+
+            border: 1px solid #aaa;
+        }
+
+        .register-button:hover {
+            background: #eeeeee;
+        }
+
+        .footer-text {
+            margin-top: 30px;
+
+            font-size: 13px;
+
+            color: #777;
+        }
+
+        @media (max-width: 600px) {
+
+            .card {
+                padding: 30px 20px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .button {
+                width: 100%;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="page">
+
+    <div class="card">
+
+        <h1 class="title">
+            MCIF Human Annotation
+        </h1>
+
+
+        <p class="subtitle">
+            Human validation platform for construction-site
+            visual annotations.
+        </p>
+
+
+        <div class="button-group">
+
+            <a
+                href="{% url 'login' %}"
+                class="button login-button"
+            >
+                Login
+            </a>
+
+
+            <a
+                href="{% url 'signup' %}"
+                class="button register-button"
+            >
+                Register
+            </a>
+
+        </div>
+
+
+        <div class="footer-text">
+            MCIF Research Annotation Platform
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

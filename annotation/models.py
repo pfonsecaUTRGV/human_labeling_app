@@ -176,6 +176,19 @@ class TaxonomyItem(models.Model):
         default=True
     )
 
+    example_source_image = models.ForeignKey(
+    Image,
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name="taxonomy_examples"
+    )
+
+    example_image_url = models.URLField(
+    blank=True,
+    max_length=1000,
+    )  
+
     def __str__(self):
         return (
             f"{self.category.name}: "

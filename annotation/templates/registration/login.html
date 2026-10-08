@@ -2,35 +2,391 @@
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
-    <title>MCIF Login</title>
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        MCIF Login
+    </title>
+
+    <style>
+
+        body {
+            margin: 0;
+
+            font-family:
+                Arial,
+                sans-serif;
+
+            background:
+                #f4f4f4;
+
+            color:
+                #222;
+        }
+
+
+        .page {
+            min-height:
+                100vh;
+
+            display:
+                flex;
+
+            justify-content:
+                center;
+
+            align-items:
+                center;
+
+            padding:
+                30px;
+
+            box-sizing:
+                border-box;
+        }
+
+
+        .card {
+            width:
+                100%;
+
+            max-width:
+                430px;
+
+            background:
+                white;
+
+            padding:
+                40px;
+
+            border:
+                1px solid #ddd;
+
+            border-radius:
+                12px;
+
+            box-sizing:
+                border-box;
+        }
+
+
+        .header {
+            text-align:
+                center;
+
+            margin-bottom:
+                30px;
+        }
+
+
+        .header h1 {
+            margin:
+                0 0 10px 0;
+
+            font-size:
+                30px;
+        }
+
+
+        .header p {
+            margin:
+                0;
+
+            color:
+                #666;
+
+            line-height:
+                1.5;
+        }
+
+
+        .section-title {
+            margin-bottom:
+                25px;
+
+            font-size:
+                22px;
+        }
+
+
+        form p {
+            margin-bottom:
+                18px;
+        }
+
+
+        label {
+            display:
+                block;
+
+            margin-bottom:
+                6px;
+
+            font-weight:
+                bold;
+
+            font-size:
+                14px;
+        }
+
+
+        input {
+            width:
+                100%;
+
+            padding:
+                12px;
+
+            box-sizing:
+                border-box;
+
+            border:
+                1px solid #bbb;
+
+            border-radius:
+                6px;
+
+            font-size:
+                16px;
+
+            background:
+                white;
+        }
+
+
+        input:focus {
+            outline:
+                none;
+
+            border-color:
+                #555;
+
+            box-shadow:
+                0 0 0 2px rgba(0, 0, 0, 0.05);
+        }
+
+
+        .login-button {
+            width:
+                100%;
+
+            padding:
+                13px;
+
+            margin-top:
+                10px;
+
+            border:
+                none;
+
+            border-radius:
+                6px;
+
+            background:
+                #222;
+
+            color:
+                white;
+
+            font-size:
+                16px;
+
+            cursor:
+                pointer;
+        }
+
+
+        .login-button:hover {
+            background:
+                #444;
+        }
+
+
+        .register-link {
+            margin-top:
+                25px;
+
+            padding-top:
+                20px;
+
+            border-top:
+                1px solid #eee;
+
+            text-align:
+                center;
+
+            color:
+                #666;
+
+            font-size:
+                14px;
+        }
+
+
+        .register-link a {
+            color:
+                #222;
+
+            font-weight:
+                bold;
+
+            text-decoration:
+                none;
+        }
+
+
+        .register-link a:hover {
+            text-decoration:
+                underline;
+        }
+
+
+        .home-link {
+            margin-top:
+                15px;
+
+            text-align:
+                center;
+
+            font-size:
+                13px;
+        }
+
+
+        .home-link a {
+            color:
+                #777;
+
+            text-decoration:
+                none;
+        }
+
+
+        .home-link a:hover {
+            color:
+                #222;
+        }
+
+
+        .errorlist {
+            list-style:
+                none;
+
+            padding:
+                10px;
+
+            margin:
+                0 0 15px 0;
+
+            background:
+                #fff3f3;
+
+            border:
+                1px solid #e5b5b5;
+
+            border-radius:
+                6px;
+
+            color:
+                #a40000;
+
+            font-size:
+                14px;
+        }
+
+
+        @media (
+            max-width: 600px
+        ) {
+
+            .page {
+                padding:
+                    20px;
+            }
+
+
+            .card {
+                padding:
+                    30px 20px;
+            }
+
+        }
+
+    </style>
+
 </head>
+
 
 <body>
 
-    <h1>MCIF Human Annotation</h1>
+<div class="page">
 
-    <h2>Login</h2>
+    <div class="card">
 
-    <form method="post">
 
-        {% csrf_token %}
+        <div class="header">
 
-        {{ form.as_p }}
+            <h1>
+                MCIF Human Annotation
+            </h1>
 
-        <button type="submit">
+            <p>
+                Sign in to continue annotating
+                construction-site images.
+            </p>
+
+        </div>
+
+
+        <h2 class="section-title">
             Login
-        </button>
+        </h2>
 
-    </form>
 
-    <p style="text-align:center; margin-top:20px;">
-    Don't have an account?
+        <form method="post">
 
-    <a href="{% url 'signup' %}">
-        Create one
-    </a>
-</p>
+            {% csrf_token %}
+
+            {{ form.as_p }}
+
+            <button
+                type="submit"
+                class="login-button"
+            >
+                Login
+            </button>
+
+        </form>
+
+
+        <div class="register-link">
+
+            Don't have an account?
+
+            <a href="{% url 'signup' %}">
+                Create one
+            </a>
+
+        </div>
+
+
+        <div class="home-link">
+
+            <a href="{% url 'home' %}">
+                ← Back to Home
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
 
 </body>
 

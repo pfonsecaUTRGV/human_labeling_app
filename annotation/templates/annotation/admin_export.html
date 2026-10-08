@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        MCIF Admin Export
+    </title>
+
+    <style>
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            color: #222;
+        }
+
+        .page {
+            min-height: 100vh;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            padding: 30px;
+
+            box-sizing: border-box;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 520px;
+
+            background: white;
+
+            padding: 40px;
+
+            border-radius: 12px;
+
+            border: 1px solid #ddd;
+
+            box-sizing: border-box;
+
+            text-align: center;
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        .description {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .stats {
+            background: #f7f7f7;
+
+            padding: 18px;
+
+            border-radius: 8px;
+
+            margin-bottom: 25px;
+        }
+
+        .count {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .download-button {
+            display: inline-block;
+
+            padding: 14px 24px;
+
+            background: #222;
+            color: white;
+
+            text-decoration: none;
+
+            border-radius: 6px;
+
+            font-size: 16px;
+        }
+
+        .download-button:hover {
+            background: #444;
+        }
+
+        .back-link {
+            margin-top: 25px;
+        }
+
+        .back-link a {
+            color: #666;
+            text-decoration: none;
+        }
+
+        .back-link a:hover {
+            color: #222;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="page">
+
+    <div class="card">
+
+        <h1>
+            MCIF Annotation Export
+        </h1>
+
+        <p class="description">
+            Superuser-only access for downloading
+            completed human annotation data.
+        </p>
+
+        <div class="stats">
+
+            <div class="count">
+                {{ completed_count }}
+            </div>
+
+            <div>
+                Completed annotations
+            </div>
+
+        </div>
+
+        <a
+            href="{% url 'download_annotations_csv' %}"
+            class="download-button"
+        >
+            Download Annotations CSV
+        </a>
+
+        <div class="back-link">
+
+            <a href="{% url 'annotate' %}">
+                ← Back to Annotation App
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>
