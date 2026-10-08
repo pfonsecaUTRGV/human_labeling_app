@@ -3,6 +3,8 @@ from django.db import transaction
 from django.db.models import Count, Q, F
 from django.shortcuts import render
 from django.utils import timezone
+import random
+
 
 from django.contrib.auth import login
 from django.shortcuts import redirect
@@ -278,6 +280,7 @@ def annotate(request):
 
         with transaction.atomic():
 
+            # Images already completed by this user
             annotated_image_ids = (
                 Annotation.objects
                 .filter(
@@ -290,6 +293,7 @@ def annotate(request):
                 )
             )
 
+            # Images this user has ever been assigned
             assigned_image_ids = (
                 ImageAssignment.objects
                 .filter(
@@ -301,11 +305,18 @@ def annotate(request):
                 )
             )
 
-            candidates = (
+            # ---------------------------------
+            # STEP 1:
+            # Find eligible image IDs.
+            #
+            # IMPORTANT:
+            # Do NOT use select_for_update()
+            # on this query because Count()
+            # produces GROUP BY in PostgreSQL.
+            # ---------------------------------
+
+            candidate_ids = (
                 Image.objects
-                .select_for_update(
-                    skip_locked=True
-                )
                 .filter(
                     active=True
                 )
@@ -330,9 +341,44 @@ def annotate(request):
                     occupied_count=0
                 )
                 .order_by("id")
+                .values_list(
+                    "id",
+                    flat=True,
+                )
             )
 
-            image = candidates.first()
+            # ---------------------------------
+            # STEP 2:
+            # Lock one actual Image row.
+            #
+            # This query has no GROUP BY,
+            # so PostgreSQL allows FOR UPDATE.
+            # skip_locked=True prevents two
+            # annotators from receiving the
+            # same image concurrently.
+            # ---------------------------------
+
+            candidate_id_list = list(candidate_ids)
+
+            image = None
+
+            if candidate_id_list:
+                random.shuffle(candidate_id_list)
+
+                for candidate_id in candidate_id_list:
+                    image = (
+                        Image.objects
+                        .select_for_update(
+                            skip_locked=True
+                        )
+                        .filter(
+                            id=candidate_id
+                        )
+                        .first()
+                    )
+
+                    if image:
+                        break
 
             if image:
 
@@ -461,6 +507,10 @@ def annotate(request):
                     ]
                 )
 
+            # ---------------------------------
+            # Redirect to next image
+            # ---------------------------------
+
             return redirect(
                 "annotate"
             )
@@ -496,7 +546,6 @@ def annotate(request):
             "completed_count": completed_count,
         },
     )
-
 
 
 
