@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 
@@ -37,7 +38,7 @@
 
         .card {
             width: 100%;
-            max-width: 520px;
+            max-width: 560px;
 
             background: white;
 
@@ -54,6 +55,12 @@
 
         h1 {
             margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
         }
 
         .description {
@@ -75,6 +82,7 @@
         .count {
             font-size: 28px;
             font-weight: bold;
+            margin-bottom: 4px;
         }
 
         .download-button {
@@ -90,14 +98,22 @@
             border-radius: 6px;
 
             font-size: 16px;
+
+            transition: background 0.2s ease;
         }
 
         .download-button:hover {
             background: #444;
         }
 
+        .section-divider {
+            border: none;
+            border-top: 1px solid #ddd;
+            margin: 35px 0;
+        }
+
         .back-link {
-            margin-top: 25px;
+            margin-top: 30px;
         }
 
         .back-link a {
@@ -126,8 +142,15 @@
 
         <p class="description">
             Superuser-only access for downloading
-            completed human annotation data.
+            completed human annotation and VLM review data.
         </p>
+
+
+        <!-- Human Annotation Export -->
+
+        <h3>
+            Human Annotations
+        </h3>
 
         <div class="stats">
 
@@ -148,6 +171,41 @@
             Download Annotations CSV
         </a>
 
+
+        <hr class="section-divider">
+
+
+        <!-- VLM Human Judge Export -->
+
+        <h3>
+            VLM Human Judge Reviews
+        </h3>
+
+        <p class="description">
+            Download completed VLM visual-grounding reviews
+            for comparison with the Gemini Judge results.
+        </p>
+
+        <div class="stats">
+
+            <div class="count">
+                {{ completed_vlm_reviews }}
+            </div>
+
+            <div>
+                Completed VLM reviews
+            </div>
+
+        </div>
+
+        <a
+            href="{% url 'export_vlm_reviews' %}"
+            class="download-button"
+        >
+            Download VLM Reviews
+        </a>
+
+
         <div class="back-link">
 
             <a href="{% url 'annotate' %}">
@@ -163,3 +221,4 @@
 </body>
 
 </html>
+```

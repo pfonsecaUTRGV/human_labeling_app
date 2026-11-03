@@ -39,5 +39,21 @@ urlpatterns = [
         views.download_annotations_csv,
         name="download_annotations_csv"
     ),
+    path(
+    "vlm-review/",
+    views.vlm_review,
+    name="vlm_review",
+    ),
+
+    path(
+        "vlm-review/<int:extraction_id>/",
+        views.vlm_review,
+        name="vlm_review_specific",
+    ),
+    path(
+        "admin-export/vlm-reviews/",
+        views.export_vlm_reviews,
+        name="export_vlm_reviews",
+    ),
 
 ]

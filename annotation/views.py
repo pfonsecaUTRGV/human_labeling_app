@@ -4,6 +4,14 @@ from django.db.models import Count, Q, F
 from django.shortcuts import render
 from django.utils import timezone
 import random
+import hashlib
+
+import tempfile
+import zipfile
+from pathlib import Path
+
+from django.core.management import call_command
+from django.http import FileResponse, HttpResponseForbidden
 
 
 from django.contrib.auth import login
@@ -31,6 +39,20 @@ import csv
 from django.contrib.auth.decorators import user_passes_test
 from django.http import HttpResponse
 
+
+
+from django.utils import timezone
+
+from .models import (
+    VLMExtraction,
+    VLMHumanReview,
+    VLMClaimJudgment,
+    VLMMissingClaim,
+    TaxonomyItem,
+)
+
+
+
 def superuser_check(user):
     return user.is_authenticated and user.is_superuser
 
@@ -42,12 +64,21 @@ def admin_export(request):
         .filter(completed=True)
         .count()
     )
+    completed_vlm_reviews = (
+        VLMHumanReview.objects
+        .filter(completed=True)
+        .count()
+    )
 
     return render(
         request,
         "annotation/admin_export.html",
         {
-            "completed_count": completed_count,
+            "completed_count":
+                completed_count,
+
+            "completed_vlm_reviews":
+                completed_vlm_reviews,
         },
     )
 
@@ -586,4 +617,474 @@ def taxonomy_help(request, item_id):
     })
 
 
+def get_image_url(image):
+    """
+    Try common image/file field names without depending on
+    one specific Image model implementation.
+    """
 
+    possible_fields = [
+        "image",
+        "file",
+        "image_file",
+        "photo",
+        "uploaded_file",
+    ]
+
+    for field_name in possible_fields:
+
+        value = getattr(
+            image,
+            field_name,
+            None,
+        )
+
+        if value:
+
+            try:
+                return value.url
+            except Exception:
+                pass
+
+    # If your Image model already stores a URL/path string
+    for field_name in [
+        "url",
+        "image_url",
+        "absolute_path",
+        "relative_path",
+    ]:
+
+        value = getattr(
+            image,
+            field_name,
+            None,
+        )
+
+        if value:
+            return str(value)
+
+    return ""
+
+
+@login_required
+def vlm_review(request, extraction_id=None):
+
+    # ============================================================
+    # SELECT REVIEW
+    # ============================================================
+
+    if extraction_id:
+
+        extraction = get_object_or_404(
+            VLMExtraction.objects.select_related("image"),
+            id=extraction_id,
+        )
+
+    else:
+
+        # Exclude all VLM analyses this reviewer has already completed.
+        completed_reviews = (
+            VLMHumanReview.objects
+            .filter(
+                reviewer=request.user,
+                completed=True,
+            )
+            .select_related(
+                "extraction",
+                "extraction__image",
+            )
+        )
+
+        completed_ids = {
+            review.extraction_id
+            for review in completed_reviews
+        }
+
+        available = list(
+            VLMExtraction.objects
+            .select_related("image")
+            .exclude(
+                id__in=completed_ids
+            )
+        )
+
+
+        def review_sort_key(extraction):
+            """
+            Stable blinded pseudo-random ordering per reviewer.
+            """
+
+            seed = (
+                f"{request.user.id}:"
+                f"{extraction.id}:"
+                "mcif-vlm-review-v1"
+            )
+
+            return hashlib.sha256(
+                seed.encode("utf-8")
+            ).hexdigest()
+
+
+        available.sort(
+            key=review_sort_key
+        )
+
+
+        # ------------------------------------------------------------
+        # Avoid showing the same image twice consecutively
+        # ------------------------------------------------------------
+
+        last_review = (
+            completed_reviews
+            .order_by("-completed_at")
+            .first()
+        )
+
+        last_image_id = None
+
+        if last_review:
+
+            last_image_id = (
+                last_review
+                .extraction
+                .image_id
+            )
+
+
+        extraction = None
+
+        for candidate in available:
+
+            if (
+                last_image_id is None
+                or candidate.image_id != last_image_id
+            ):
+
+                extraction = candidate
+                break
+
+
+        # Fallback:
+        # if only the paired extraction remains, allow it.
+        if extraction is None and available:
+
+            extraction = available[0]
+
+
+        if extraction is None:
+
+            return render(
+                request,
+                "annotation/vlm_review_complete.html",
+            )
+
+    review, _ = (
+        VLMHumanReview.objects
+        .get_or_create(
+            extraction=extraction,
+            reviewer=request.user,
+        )
+    )
+
+    claims = (
+        extraction.claims
+        .all()
+        .order_by(
+            "field",
+            "claim_order",
+            "id",
+        )
+    )
+
+    # ============================================================
+    # POST REVIEW
+    # ============================================================
+
+    if request.method == "POST":
+
+        with transaction.atomic():
+
+            # ----------------------------------------
+            # Save each individual GPT claim judgment
+            # ----------------------------------------
+
+            for claim in claims:
+
+                verdict = request.POST.get(
+                    f"claim_{claim.id}"
+                )
+
+                if verdict not in {
+                    "supported",
+                    "partially_supported",
+                    "unsupported",
+                    "cannot_determine",
+                }:
+                    continue
+
+                notes = request.POST.get(
+                    f"notes_{claim.id}",
+                    "",
+                ).strip()
+
+                VLMClaimJudgment.objects.update_or_create(
+                    review=review,
+                    claim=claim,
+                    defaults={
+                        "verdict": verdict,
+                        "notes": notes,
+                    },
+                )
+
+            # ----------------------------------------
+            # Missing visible claim
+            # ----------------------------------------
+
+            missing_answer = request.POST.get(
+                "has_missing_claim"
+            )
+
+            if missing_answer == "yes":
+
+                missing_field = request.POST.get(
+                    "missing_field",
+                    "",
+                ).strip()
+
+                taxonomy_item_id = request.POST.get(
+                    "missing_taxonomy_item",
+                    "",
+                ).strip()
+
+                missing_text = request.POST.get(
+                    "missing_text",
+                    "",
+                ).strip()
+
+                missing_notes = request.POST.get(
+                    "missing_notes",
+                    "",
+                ).strip()
+
+                taxonomy_item = None
+
+                if taxonomy_item_id:
+
+                    taxonomy_item = (
+                        TaxonomyItem.objects
+                        .filter(
+                            id=taxonomy_item_id
+                        )
+                        .first()
+                    )
+
+                if (
+                    missing_field
+                    and (
+                        taxonomy_item
+                        or missing_text
+                    )
+                ):
+
+                    VLMMissingClaim.objects.create(
+                        review=review,
+                        field=missing_field,
+                        taxonomy_item=taxonomy_item,
+                        free_text=missing_text,
+                        notes=missing_notes,
+                    )
+
+            # ----------------------------------------
+            # Overall notes
+            # ----------------------------------------
+
+            review.overall_notes = (
+                request.POST.get(
+                    "overall_notes",
+                    "",
+                ).strip()
+            )
+
+            # Only mark complete when every GPT claim
+            # received a judgment.
+            total_claims = claims.count()
+
+            judged_claims = (
+                review.claim_judgments
+                .filter(
+                    claim__in=claims
+                )
+                .count()
+            )
+
+            if judged_claims == total_claims:
+
+                review.completed = True
+                review.completed_at = timezone.now()
+
+            review.save()
+
+        if review.completed:
+
+            return redirect(
+                "vlm_review"
+            )
+
+    # ============================================================
+    # EXISTING JUDGMENTS
+    # ============================================================
+
+    judgments = {
+        judgment.claim_id: judgment
+        for judgment
+        in review.claim_judgments.all()
+    }
+
+    claim_rows = []
+
+    for claim in claims:
+
+        claim_rows.append({
+            "claim": claim,
+            "judgment": judgments.get(
+                claim.id
+            ),
+        })
+
+    # ============================================================
+    # PROGRESS
+    # ============================================================
+
+    total_extractions = (
+        VLMExtraction.objects.count()
+    )
+
+    completed_reviews = (
+        VLMHumanReview.objects
+        .filter(
+            reviewer=request.user,
+            completed=True,
+        )
+        .count()
+    )
+
+    taxonomy_items = (
+        TaxonomyItem.objects
+        .filter(active=True)
+        .order_by(
+            "category",
+            "canonical_name",
+        )
+    )
+
+    taxonomy_by_category = {}
+
+    for item in taxonomy_items:
+
+        category = str(
+            item.category
+        ).strip()
+
+        taxonomy_by_category.setdefault(
+            category,
+            []
+        )
+
+        taxonomy_by_category[category].append({
+            "id": item.id,
+            "name": item.canonical_name,
+        })
+    context = {
+        "extraction": extraction,
+        "review": review,
+        "claim_rows": claim_rows,
+        "taxonomy_by_category": taxonomy_by_category,
+        # Do NOT expose extraction.model_version.
+        "image_url": get_presigned_image_url(
+            extraction.image
+        ),
+
+        "total_extractions": total_extractions,
+        "completed_reviews": completed_reviews,
+        "current_number": completed_reviews + 1,
+
+        "field_choices": [
+            ("worker_count", "Worker Count"),
+            ("ppe_compliance", "PPE Compliance"),
+            ("equipment", "Equipment"),
+            (
+                "materials_components",
+                "Materials / Components",
+            ),
+            ("hazards", "Hazards"),
+            ("activities", "Activities"),
+            (
+                "quality_observations",
+                "Quality Observations",
+            ),
+            ("stage", "Construction Stage"),
+        ],
+    }
+
+    return render(
+        request,
+        "annotation/vlm_review.html",
+        context,
+    )
+
+@login_required
+def export_vlm_reviews(request):
+
+    if not request.user.is_superuser:
+        return HttpResponseForbidden(
+            "Superuser access required."
+        )
+
+    temp_dir = tempfile.TemporaryDirectory()
+
+    export_dir = Path(
+        temp_dir.name
+    ) / "vlm_reviews"
+
+    export_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    call_command(
+        "export_human_judge",
+        output_dir=str(export_dir),
+    )
+
+    zip_path = (
+        Path(temp_dir.name)
+        / "vlm_human_reviews.zip"
+    )
+
+    with zipfile.ZipFile(
+        zip_path,
+        "w",
+        zipfile.ZIP_DEFLATED,
+    ) as zip_file:
+
+        for file_path in export_dir.glob("*"):
+
+            if file_path.is_file():
+
+                zip_file.write(
+                    file_path,
+                    arcname=file_path.name,
+                )
+
+    response = FileResponse(
+        open(zip_path, "rb"),
+        as_attachment=True,
+        filename="vlm_human_reviews.zip",
+        content_type="application/zip",
+    )
+
+    # Keep temporary directory alive until
+    # Django finishes returning the response.
+    response._temp_dir = temp_dir
+
+    return response

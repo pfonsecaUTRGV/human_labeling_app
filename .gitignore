@@ -1,25 +1,16 @@
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
+*.pyc
+*.pyo
 
-# Virtual environments
+# Virtual environment
 virt/
-venv/
-.venv/
-env/
-
-# Django local database
-db.sqlite3
-db.sqlite3.backup
-
-# Django generated static files
-staticfiles/
 
 # Environment / secrets
 .env
-.env.*
-*.env
+
+# Local database
+db.sqlite3
 
 # macOS
 .DS_Store
@@ -33,3 +24,10 @@ human_annotations_anonymous.csv
 taxonomy_help_content.csv
 taxonomy_help_content_final.csv
 taxonomy_help_content_populated.csv
+
+# VLM exports / deployment artifacts
+vlm_review_exports/
+mcif-deploy.zip
+
+db.sqlite3.backup
+staticfiles/

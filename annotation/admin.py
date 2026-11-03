@@ -10,6 +10,14 @@ from .models import (
     AnnotationSelection,
 )
 
+from .models import (
+    VLMExtraction,
+    VLMClaim,
+    VLMHumanReview,
+    VLMClaimJudgment,
+    VLMMissingClaim,
+)
+
 
 @admin.register(Image)
 class ImageAdmin(admin.ModelAdmin):
@@ -107,4 +115,82 @@ class ImageAssignmentAdmin(admin.ModelAdmin):
     search_fields = (
         "image__filename",
         "annotator__username",
+    )
+
+
+@admin.register(VLMExtraction)
+class VLMExtractionAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "image",
+        "model_version",
+        "created_at",
+    )
+
+    list_filter = (
+        "model_version",
+    )
+
+    search_fields = (
+        "image__image_id",
+    )
+
+
+@admin.register(VLMClaim)
+class VLMClaimAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "extraction",
+        "field",
+        "claim_value",
+    )
+
+    list_filter = (
+        "field",
+        "extraction__model_version",
+    )
+
+
+@admin.register(VLMHumanReview)
+class VLMHumanReviewAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "reviewer",
+        "extraction",
+        "completed",
+        "started_at",
+        "completed_at",
+    )
+
+    list_filter = (
+        "completed",
+        "extraction__model_version",
+    )
+
+
+@admin.register(VLMClaimJudgment)
+class VLMClaimJudgmentAdmin(admin.ModelAdmin):
+    list_display = (
+        "review",
+        "claim",
+        "verdict",
+    )
+
+    list_filter = (
+        "verdict",
+        "claim__field",
+    )
+
+
+@admin.register(VLMMissingClaim)
+class VLMMissingClaimAdmin(admin.ModelAdmin):
+    list_display = (
+        "review",
+        "field",
+        "taxonomy_item",
+        "free_text",
+    )
+
+    list_filter = (
+        "field",
     )
