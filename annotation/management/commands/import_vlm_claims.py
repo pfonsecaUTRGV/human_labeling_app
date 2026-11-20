@@ -154,13 +154,50 @@ class Command(BaseCommand):
                 # Find image already stored by the MCIF app
                 # -------------------------------------------------
 
-                try:
+                # -------------------------------------------------
+                # Find image already stored by the MCIF app
+                # -------------------------------------------------
 
+                image = None
+
+                # First try legacy behavior:
+                # match directly using image_id.
+                try:
                     image = Image.objects.get(
                         image_id=human_image_id
                     )
 
                 except Image.DoesNotExist:
+                    pass
+
+
+                # If not found, try V4-style matching
+                # using audit_id + filename.
+                if image is None:
+
+                    audit_id = str(
+                        row.get("audit_id", "")
+                    ).strip()
+
+                    filename = (
+                        row.get("filename", "")
+                        .strip()
+                    )
+
+                    if audit_id and filename:
+
+                        image = (
+                            Image.objects
+                            .filter(
+                                audit_id=audit_id,
+                                filename=filename,
+                            )
+                            .first()
+                        )
+
+
+                # Still not found
+                if image is None:
 
                     missing_images.append(
                         human_image_id

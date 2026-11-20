@@ -837,62 +837,100 @@ def vlm_review(request, extraction_id=None):
                 )
 
             # ----------------------------------------
-            # Missing visible claim
+            # Missing visible claims
             # ----------------------------------------
 
             missing_answer = request.POST.get(
                 "has_missing_claim"
             )
 
+            # Prevent duplicate rows if the review is resubmitted.
+            review.missing_claims.all().delete()
+
+
             if missing_answer == "yes":
 
-                missing_field = request.POST.get(
-                    "missing_field",
-                    "",
-                ).strip()
+                missing_fields = request.POST.getlist(
+                    "missing_field[]"
+                )
 
-                taxonomy_item_id = request.POST.get(
-                    "missing_taxonomy_item",
-                    "",
-                ).strip()
+                taxonomy_item_ids = request.POST.getlist(
+                    "missing_taxonomy_item[]"
+                )
 
-                missing_text = request.POST.get(
-                    "missing_text",
-                    "",
-                ).strip()
+                missing_texts = request.POST.getlist(
+                    "missing_text[]"
+                )
 
-                missing_notes = request.POST.get(
-                    "missing_notes",
-                    "",
-                ).strip()
+                missing_notes_list = request.POST.getlist(
+                    "missing_notes[]"
+                )
 
-                taxonomy_item = None
 
-                if taxonomy_item_id:
+                max_items = max(
+                    len(missing_fields),
+                    len(taxonomy_item_ids),
+                    len(missing_texts),
+                    len(missing_notes_list),
+                    0,
+                )
 
-                    taxonomy_item = (
-                        TaxonomyItem.objects
-                        .filter(
-                            id=taxonomy_item_id
+
+                for i in range(max_items):
+
+                    missing_field = (
+                        missing_fields[i].strip()
+                        if i < len(missing_fields)
+                        else ""
+                    )
+
+                    taxonomy_item_id = (
+                        taxonomy_item_ids[i].strip()
+                        if i < len(taxonomy_item_ids)
+                        else ""
+                    )
+
+                    missing_text = (
+                        missing_texts[i].strip()
+                        if i < len(missing_texts)
+                        else ""
+                    )
+
+                    missing_notes = (
+                        missing_notes_list[i].strip()
+                        if i < len(missing_notes_list)
+                        else ""
+                    )
+
+
+                    taxonomy_item = None
+
+                    if taxonomy_item_id:
+
+                        taxonomy_item = (
+                            TaxonomyItem.objects
+                            .filter(
+                                id=taxonomy_item_id
+                            )
+                            .first()
                         )
-                        .first()
-                    )
 
-                if (
-                    missing_field
-                    and (
-                        taxonomy_item
-                        or missing_text
-                    )
-                ):
 
-                    VLMMissingClaim.objects.create(
-                        review=review,
-                        field=missing_field,
-                        taxonomy_item=taxonomy_item,
-                        free_text=missing_text,
-                        notes=missing_notes,
-                    )
+                    if (
+                        missing_field
+                        and (
+                            taxonomy_item
+                            or missing_text
+                        )
+                    ):
+
+                        VLMMissingClaim.objects.create(
+                            review=review,
+                            field=missing_field,
+                            taxonomy_item=taxonomy_item,
+                            free_text=missing_text,
+                            notes=missing_notes,
+                        )
 
             # ----------------------------------------
             # Overall notes

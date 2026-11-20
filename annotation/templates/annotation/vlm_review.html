@@ -225,6 +225,22 @@
                     </div>
 
 
+                    {% if row.claim.field == "worker_count" or row.claim.get_field_display == "Worker Count" %}
+
+                    <div class="alert alert-secondary py-2 mb-3">
+
+                        <strong>Worker Count scoring:</strong><br>
+
+                        ✅ <strong>Supported</strong> = correct number or ±1 worker<br>
+                        🟡 <strong>Partially Supported</strong> = difference of ±2 workers<br>
+                        ❌ <strong>Unsupported</strong> = difference of 3 or more workers<br>
+                        ❓ <strong>Cannot Determine</strong> = worker count cannot be reliably determined from the image
+
+                    </div>
+
+                    {% endif %}
+
+
                     <div class="verdict-options">
 
 
@@ -370,92 +386,112 @@
                 style="display: none; margin-top: 20px;"
             >
 
-                <div class="row">
+                <div id="missingItemsContainer">
 
-                    <div class="col-md-4">
+                    <div class="missing-item-card">
 
-                        <label class="form-label">
-                            Category
-                        </label>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <strong class="missing-item-title">Missing Item #1</strong>
+                        </div>
 
-                        <select
-                            id="missingField"
-                            name="missing_field"
-                            class="form-select"
-                            onchange="updateTaxonomyOptions()"
-                        >
+                        <div class="row">
 
-                            <option value="">
-                                Select category
-                            </option>
+                            <div class="col-md-4">
 
-                            {% for value, label in field_choices %}
+                                <label class="form-label">
+                                    Category
+                                </label>
 
-                                <option value="{{ value }}">
-                                    {{ label }}
-                                </option>
+                                <select
+                                    name="missing_field[]"
+                                    class="form-select missing-field"
+                                    onchange="updateMissingTaxonomyOptions(this)"
+                                >
 
-                            {% endfor %}
+                                    <option value="">
+                                        Select category
+                                    </option>
 
-                        </select>
+                                    {% for value, label in field_choices %}
+
+                                        <option value="{{ value }}">
+                                            {{ label }}
+                                        </option>
+
+                                    {% endfor %}
+
+                                </select>
+
+                            </div>
+
+
+                            <div class="col-md-8">
+
+                                <label class="form-label">
+                                    Missing taxonomy item
+                                </label>
+
+                                <select
+                                    name="missing_taxonomy_item[]"
+                                    class="form-select missing-taxonomy-item"
+                                >
+
+                                    <option value="">
+                                        Select taxonomy item
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="mt-3">
+
+                            <label class="form-label">
+                                Other / not listed
+                            </label>
+
+                            <input
+                                type="text"
+                                name="missing_text[]"
+                                class="form-control"
+                                placeholder="Use only if the missing claim is not represented in the taxonomy"
+                            >
+
+                        </div>
+
+
+                        <div class="mt-3">
+
+                            <label class="form-label">
+                                Notes
+                            </label>
+
+                            <textarea
+                                name="missing_notes[]"
+                                rows="2"
+                                class="form-control"
+                                placeholder="Optional explanation..."
+                            ></textarea>
+
+                        </div>
 
                     </div>
 
-
-                    <div class="col-md-8">
-
-                        <label class="form-label">
-                            Missing taxonomy item
-                        </label>
-
-                        <select
-                            id="missingTaxonomyItem"
-                            name="missing_taxonomy_item"
-                            class="form-select"
-                        >
-
-                            <option value="">
-                                Select taxonomy item
-                            </option>
-
-                        </select>
-
-                    </div>
-
                 </div>
 
 
-                <div class="mt-3">
+                <button
+                    type="button"
+                    class="btn btn-outline-primary mt-3"
+                    onclick="addMissingItem()"
+                >
+                    + Add another missing item
+                </button>
 
-                    <label class="form-label">
-                        Other / not listed
-                    </label>
-
-                    <input
-                        type="text"
-                        name="missing_text"
-                        class="form-control"
-                        placeholder="Use only if the missing claim is not represented in the taxonomy"
-                    >
-
-                </div>
-
-
-                <div class="mt-3">
-
-                    <label class="form-label">
-                        Notes
-                    </label>
-
-                    <textarea
-                        name="missing_notes"
-                        rows="2"
-                        class="form-control"
-                        placeholder="Optional explanation..."
-                    ></textarea>
-
-                </div>
-
+            </div>
             </div>
 
         </div>
@@ -520,18 +556,17 @@ function toggleMissingSection(show) {
 }
 
 
-function updateTaxonomyOptions() {
+function updateMissingTaxonomyOptions(fieldSelect) {
 
-    const fieldSelect = document.getElementById(
-        "missingField"
+    const itemCard = fieldSelect.closest(
+        ".missing-item-card"
     );
 
-    const taxonomySelect = document.getElementById(
-        "missingTaxonomyItem"
+    const taxonomySelect = itemCard.querySelector(
+        ".missing-taxonomy-item"
     );
 
     const field = fieldSelect.value;
-
 
     taxonomySelect.innerHTML = "";
 
@@ -540,15 +575,11 @@ function updateTaxonomyOptions() {
     );
 
     defaultOption.value = "";
-
-    defaultOption.textContent = (
-        "Select taxonomy item"
-    );
+    defaultOption.textContent = "Select taxonomy item";
 
     taxonomySelect.appendChild(
         defaultOption
     );
-
 
     const categoryMap = {
         "equipment": "Equipment",
@@ -559,11 +590,7 @@ function updateTaxonomyOptions() {
         "stage": "Stage",
     };
 
-
-    const taxonomyCategory = (
-        categoryMap[field]
-    );
-
+    const taxonomyCategory = categoryMap[field];
 
     if (
         !taxonomyCategory
@@ -572,10 +599,7 @@ function updateTaxonomyOptions() {
         return;
     }
 
-
-    taxonomyByCategory[
-        taxonomyCategory
-    ].forEach(
+    taxonomyByCategory[taxonomyCategory].forEach(
         function(item) {
 
             const option = document.createElement(
@@ -583,7 +607,6 @@ function updateTaxonomyOptions() {
             );
 
             option.value = item.id;
-
             option.textContent = item.name;
 
             taxonomySelect.appendChild(
@@ -591,6 +614,155 @@ function updateTaxonomyOptions() {
             );
         }
     );
+}
+
+
+function addMissingItem() {
+
+    const container = document.getElementById(
+        "missingItemsContainer"
+    );
+
+    const currentCount = container.querySelectorAll(
+        ".missing-item-card"
+    ).length;
+
+    const newNumber = currentCount + 1;
+
+    const template = `
+        <div class="missing-item-card mt-4 pt-4 border-top">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+
+                <strong class="missing-item-title">
+                    Missing Item #${newNumber}
+                </strong>
+
+                <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    onclick="removeMissingItem(this)"
+                >
+                    Remove
+                </button>
+
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-4">
+
+                    <label class="form-label">
+                        Category
+                    </label>
+
+                    <select
+                        name="missing_field[]"
+                        class="form-select missing-field"
+                        onchange="updateMissingTaxonomyOptions(this)"
+                    >
+
+                        <option value="">
+                            Select category
+                        </option>
+
+                        {% for value, label in field_choices %}
+                            <option value="{{ value }}">
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+                <div class="col-md-8">
+
+                    <label class="form-label">
+                        Missing taxonomy item
+                    </label>
+
+                    <select
+                        name="missing_taxonomy_item[]"
+                        class="form-select missing-taxonomy-item"
+                    >
+
+                        <option value="">
+                            Select taxonomy item
+                        </option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+            <div class="mt-3">
+
+                <label class="form-label">
+                    Other / not listed
+                </label>
+
+                <input
+                    type="text"
+                    name="missing_text[]"
+                    class="form-control"
+                    placeholder="Use only if the missing claim is not represented in the taxonomy"
+                >
+
+            </div>
+
+            <div class="mt-3">
+
+                <label class="form-label">
+                    Notes
+                </label>
+
+                <textarea
+                    name="missing_notes[]"
+                    rows="2"
+                    class="form-control"
+                    placeholder="Optional explanation..."
+                ></textarea>
+
+            </div>
+
+        </div>
+    `;
+
+    container.insertAdjacentHTML(
+        "beforeend",
+        template
+    );
+}
+
+
+function removeMissingItem(button) {
+
+    button.closest(
+        ".missing-item-card"
+    ).remove();
+
+    renumberMissingItems();
+}
+
+
+function renumberMissingItems() {
+
+    const items = document.querySelectorAll(
+        ".missing-item-card"
+    );
+
+    items.forEach(function(item, index) {
+
+        const title = item.querySelector(
+            ".missing-item-title"
+        );
+
+        if (title) {
+            title.textContent = `Missing Item #${index + 1}`;
+        }
+    });
 }
 
 </script>
